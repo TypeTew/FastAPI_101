@@ -5,6 +5,9 @@ from random import randint
 import uuid
 from typing import List
 
+
+IMAGEDIR = "fastapi-images/"
+
 router = APIRouter(
     prefix="/img",
     tags=["File"],
@@ -39,19 +42,42 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @router.get("/file/{name_file}")
-def get_file(name_file: str):
+async def get_file(name_file: str):
     return FileResponse(path=getcwd() + "/" + name_file)
 
 
 @router.delete("/delete/file/{name_file}")
-def delete_file(name_file: str):
+async def delete_file(name_file: str):
     try:
         remove(getcwd() + "/" + name_file)
         return JSONResponse(content={
-            "removed": True
-        }, status_code=200)
+            "removed": True}, status_code=200)
+
     except FileNotFoundError:
+
         return JSONResponse(content={
-            "removed": False,
-            "error_message": "File not found"
+            "removed": False, "error_message": "File not found"
         }, status_code=404)
+
+
+@router.post("/images/")
+async def create_upload_file(file: UploadFile = File(...)):
+
+    file.filename = f"{uuid.uuid4()}.jpg"
+    contents = await file.read()
+
+    with open(f"{IMAGEDIR}{file.filename}", "wb") as f:
+        f.write(contents)
+
+    return {"filename": file.filename}
+
+
+@router.get("/images/")
+async def read_random_file():
+
+    files = os.listdir(IMAGEDIR)
+    random_index = randint(0, len(files) - 1)
+
+    path = f"{IMAGEDIR}{files[random_index]}"
+
+    return FileResponse(path)
